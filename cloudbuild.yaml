@@ -1,0 +1,52 @@
+# ==========================================================================
+# Pipeline de CI/CD - TechPay Production Compliance
+# ==========================================================================
+
+name: "deploy-credit-api-production" #deixei o nome pelo hábito de documentação mesmo o GCP n precisando
+
+steps:
+  # REQUISITO 1: Build da imagem usando o hash do commit ($SHORT_SHA)
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Build Docker Image'
+    args: 
+      - 'build'
+      - '-t'
+      - 'southamerica-east1-docker.pkg.dev/${PROJECT_ID}/techpay-repo/credit-api:$SHORT_SHA'
+      - '.'
+
+  # REQUISITO 1: Armazenamento imutável no Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Push Image to Registry'
+    args: 
+      - 'push'
+      - 'southamerica-east1-docker.pkg.dev/${PROJECT_ID}/techpay-repo/credit-api:$SHORT_SHA'
+
+  # REQUISITO 2, 3 e 4: Deploy no Cloud Run com todas as travas da diretoria
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'Deploy to Cloud Run'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'credit-api'
+      - '--image=southamerica-east1-docker.pkg.dev/${PROJECT_ID}/techpay-repo/credit-api:$SHORT_SHA'
+      - '--region=southamerica-east1'
+      - '--platform=managed'
+      # [REQUISITO 2] Rodar sob a Service Account customizada
+      - '--service-account=sa-credit-api@${PROJECT_ID}.iam.gserviceaccount.com'
+      # [REQUISITO 2 & 4] Injeção do Secret e Rastreabilidade do Commit
+      - '--set-env-vars=REVISION_TAG=$SHORT_SHA'
+      - '--set-secrets=CREDIT_API_KEY=CREDIT_API_KEY:latest'
+      # [REQUISITO 3] Conector VPC e Controle de Egress (all-traffic)
+      - '--vpc-connector=techpay-vpc-connector' 
+      - '--vpc-egress=all-traffic'
+      # [REQUISITO 4] Zero Cold Start (Mínimo 1 instância ativa)
+      - '--min-instances=1'
+      # [REQUISITO 4] Acesso Restrito (Bloqueia acessos anônimos externos)
+      - '--no-allow-unauthenticated'
+
+images:
+  - 'southamerica-east1-docker.pkg.dev/${PROJECT_ID}/techpay-repo/credit-api:$SHORT_SHA'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
