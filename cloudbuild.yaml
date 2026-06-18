@@ -21,7 +21,7 @@ steps:
       - 'push'
       - 'southamerica-east1-docker.pkg.dev/${PROJECT_ID}/techpay-repo/credit-api:$SHORT_SHA'
 
-  # REQUISITO 2, 3 e 4: Deploy no Cloud Run com todas as travas da diretoria
+  # REQUISITOS 2, 3 e 4
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     id: 'Deploy to Cloud Run'
     entrypoint: 'gcloud'
