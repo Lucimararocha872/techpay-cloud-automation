@@ -9,7 +9,7 @@ def credit_check():
     api_key = os.environ.get("CREDIT_API_KEY", "NOT_FOUND")
     return jsonify({
         "service": "credit-api",
-        "status": "active-v1",
+        "status": "active-v2",
         "vault_access": True if api_key != "NOT_FOUND" else False,
         "revision_tag": os.environ.get("REVISION_TAG", "raw")
     }), 200
